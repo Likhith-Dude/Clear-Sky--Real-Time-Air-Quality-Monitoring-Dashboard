@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ClearSky Dashboard</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            background: linear-gradient(to bottom, #e8f9fd, #fdfcfb);
+            font-family: Arial, sans-serif;
+        }
+        .navbar {
+            background-color: #1e88e5;
+            color: white;
+        }
+        .navbar-brand {
+            font-weight: bold;
+            color: white;
+        }
+        .card {
+            text-align: center;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            transition: transform 0.3s ease-in-out;
+        }
+        .card:hover {
+            transform: scale(1.05);
+        }
+        .chart-container {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <a class="navbar-brand" href="#">ClearSky Dashboard</a>
+    </nav>
+    <div class="container mt-4">
+        <h2 class="text-center mb-4">Welcome to the Enhanced Air Quality Dashboard</h2>
+        <div class="row">
+            <div class="col-md-4">
+                <div class="card p-3">
+                    <h5>PM2.5</h5>
+                    <h3 id="pm25-value">0</h3>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card p-3">
+                    <h5>PM10</h5>
+                    <h3 id="pm10-value">0</h3>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card p-3">
+                    <h5>CO2</h5>
+                    <h3 id="co2-value">0</h3>
+                </div>
+            </div>
+        </div>
+        <div class="chart-container">
+            <canvas id="line-chart"></canvas>
+        </div>
+        <div class="chart-container">
+            <canvas id="pie-chart"></canvas>
+        </div>
+        <button class="btn btn-primary mt-4" onclick="downloadCSV()">Download Data</button>
+    </div>
+    <script>
+        const updateCards = (data) => {
+            document.getElementById("pm25-value").innerText = data["PM2.5"];
+            document.getElementById("pm10-value").innerText = data["PM10"];
+            document.getElementById("co2-value").innerText = data["CO2"];
+        };
+
+        const updatePieChart = (data) => {
+            const total = data["PM2.5"] + data["PM10"] + data["CO2"];
+            pieChart.data.datasets[0].data = [
+                (data["PM2.5"] / total) * 100,
+                (data["PM10"] / total) * 100,
+                (data["CO2"] / total) * 100
+            ];
+            pieChart.update();
+        };
+
+        const fetchData = () => {
+            fetch("/data")
+                .then(response => response.json())
+                .then(data => {
+                    updateCards(data);
+                    updateCharts(data);
+                    updatePieChart(data);
+                });
+        };
+
+        const updateCharts = (data) => {
+            lineChart.data.labels.push(data.timestamp);
+            lineChart.data.datasets[0].data.push(data["PM2.5"]);
+            lineChart.data.datasets[1].data.push(data["PM10"]);
+            lineChart.data.datasets[2].data.push(data["CO2"]);
+            lineChart.update();
+        };
+
+        const downloadCSV = () => {
+            window.location.href = "/download";
+        };
+
+        const lineChart = new Chart(document.getElementById("line-chart"), {
+            type: "line",
+            data: {
+                labels: [],
+                datasets: [
+                    { label: "PM2.5", borderColor: "red", data: [], fill: false },
+                    { label: "PM10", borderColor: "blue", data: [], fill: false },
+                    { label: "CO2", borderColor: "green", data: [], fill: false },
+                ]
+            },
+            options: { responsive: true }
+        });
+
+        const pieChart = new Chart(document.getElementById("pie-chart"), {
+            type: "pie",
+            data: {
+                labels: ["PM2.5", "PM10", "CO2"],
+                datasets: [{
+                    label: "Pollutant Contributions",
+                    backgroundColor: ["red", "blue", "green"],
+                    data: []
+                }]
+            },
+            options: { responsive: true }
+        });
+
+        setInterval(fetchData, 5000);
+    </script>
+</body>
+</html>
